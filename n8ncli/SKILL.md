@@ -64,24 +64,37 @@ node {baseDir}/src/cli.js <workspace> errors --limit 20
 
 ## Options
 
+**Filtering:**
 - `--limit <n>` - Number of results (default: 10)
 - `--status <status>` - Filter: success, error, waiting
 - `--node <name>` - Filter/show specific node by name pattern
-- `--verbose` - Show full node data (default: compact summary)
 - `--errors` - Only show failed nodes
-- `--ai` - Show AI-specific data (tokens, prompts, LLM outputs)
+- `--filter <k=v>` - Filter by customData (e.g. `--filter "airtable_id=xyz"`)
+
+**Output to stdout (formatted):**
+- `--verbose` - Full formatted node data (human-readable)
+- `--ai` - AI-specific data (tokens, prompts, LLM outputs)
 - `--full` - Show full output text (not truncated)
-- `--json` - Write JSON to temp file, return path (context-efficient)
 
-## Context Efficiency
+**Output to file (raw data):**
+- `--json` - Write raw JSON to temp file, return path only
 
-The `--json` flag writes to a temp file instead of stdout. This keeps context clean:
+## Output Modes
+
+| Flag | Destination | Format |
+|------|-------------|--------|
+| (none) | stdout | compact summary table |
+| `--verbose` | stdout | formatted, human-readable |
+| `--ai` | stdout | AI-specific formatted |
+| `--json` | temp file | raw JSON data |
+
+The `--json` flag writes to a temp file for context efficiency:
 ```bash
 node {baseDir}/src/cli.js <workspace> execution <id> --json
 # Output: JSON written to: /tmp/n8ncli/execution-123-2025-12-15T...json
 ```
 
-Then use Read/Grep tools to search the file as needed, rather than loading entire JSON into context.
+Then use Read/Grep tools to search the file as needed.
 
 ## Default Behavior
 
