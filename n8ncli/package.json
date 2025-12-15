@@ -1,0 +1,14 @@
+{
+  "name": "@kaiserlich/n8ncli",
+  "version": "1.0.0",
+  "description": "N8N CLI for monitoring workflows across multiple instances",
+  "type": "module",
+  "main": "src/cli.js",
+  "bin": {
+    "n8ncli": "./src/cli.js"
+  },
+  "scripts": {
+    "start": "node src/cli.js"
+  },
+  "dependencies": {}
+}
