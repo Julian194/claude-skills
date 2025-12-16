@@ -63,4 +63,11 @@ export class N8nClient {
   async listWorkflows() {
     return this.request('/workflows');
   }
+
+  /**
+   * Get a single workflow by ID
+   */
+  async getWorkflow(workflowId) {
+    return this.request(`/workflows/${workflowId}`);
+  }
 }

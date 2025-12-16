@@ -37,6 +37,7 @@ Usage:
 
 Commands:
   workflows                    List all workflows
+  workflow <id>                Get workflow definition (show all nodes)
   executions <workflow-id>     List executions for a workflow
   execution <id>               Get execution details (all nodes)
   errors [--limit <n>]         List recent failed executions
@@ -264,6 +265,34 @@ async function main() {
         break;
       }
 
+      case 'workflow': {
+        const workflowId = parsed.commandArgs[0];
+        if (!workflowId) {
+          console.error('Usage: n8ncli <workspace> workflow <id>');
+          process.exit(1);
+        }
+
+        const workflow = await client.getWorkflow(workflowId);
+
+        if (parsed.json) {
+          const filepath = writeJsonToTemp(workflow, `workflow-${workflowId}`);
+          console.log(`JSON written to: ${filepath}`);
+        } else {
+          console.log(`\nWorkflow: ${workflow.name}`);
+          console.log(`ID: ${workflow.id}`);
+          console.log(`Status: ${workflow.active ? 'active' : 'inactive'}`);
+          console.log(`\nNodes (${workflow.nodes?.length || 0}):\n`);
+
+          if (workflow.nodes && workflow.nodes.length > 0) {
+            for (const node of workflow.nodes) {
+              const type = node.type?.replace('n8n-nodes-base.', '') || 'unknown';
+              console.log(`  • ${node.name} (${type})`);
+            }
+          }
+        }
+        break;
+      }
+
       case 'executions': {
         const workflowId = parsed.commandArgs[0];
         if (!workflowId) {
@@ -274,7 +303,7 @@ async function main() {
         const response = await client.listExecutions(workflowId, {
           limit: parsed.limit,
           status: parsed.status,
-          includeData: true,
+          includeData: false,
         });
 
         let executions = response.data || response;
@@ -309,11 +338,10 @@ async function main() {
               console.log(`${exec.id}\t${exec.status}\t${date}\t${customStr}`);
             }
           } else {
-            console.log('ID\tSTATUS\tSTARTED\tTOKENS');
+            console.log('ID\tSTATUS\tSTARTED');
             for (const exec of executions) {
-              const tokens = extractTokenUsage(exec);
               const date = new Date(exec.startedAt).toLocaleString();
-              console.log(`${exec.id}\t${exec.status}\t${date}\t${tokens.totals.totalTokens}`);
+              console.log(`${exec.id}\t${exec.status}\t${date}`);
             }
           }
         }
