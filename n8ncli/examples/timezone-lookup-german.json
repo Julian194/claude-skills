@@ -1,0 +1,113 @@
+{
+  "name": "Timezone Lookup (German)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "timezone-lookup",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "timezone-lookup-de"
+    },
+    {
+      "parameters": {
+        "jsCode": "const countryMap = {\n  'deutschland': 'DE',\n  'germany': 'DE',\n  'schweiz': 'CH',\n  'switzerland': 'CH',\n  'österreich': 'AT',\n  'austria': 'AT',\n  'frankreich': 'FR',\n  'france': 'FR',\n  'italien': 'IT',\n  'italy': 'IT',\n  'spanien': 'ES',\n  'spain': 'ES',\n  'niederlande': 'NL',\n  'netherlands': 'NL',\n  'belgien': 'BE',\n  'belgium': 'BE',\n  'polen': 'PL',\n  'poland': 'PL',\n  'tschechien': 'CZ',\n  'czech republic': 'CZ',\n  'ungarn': 'HU',\n  'hungary': 'HU',\n  'vereinigtes königreich': 'GB',\n  'großbritannien': 'GB',\n  'united kingdom': 'GB',\n  'usa': 'US',\n  'vereinigte staaten': 'US',\n  'united states': 'US'\n};\n\nconst country = $input.first().json.country || $input.first().json.Geburtsland || '';\nconst countryLower = country.toLowerCase().trim();\nconst countryCode = countryMap[countryLower] || country.toUpperCase().slice(0, 2);\n\nreturn [{\n  json: {\n    city: $input.first().json.city || $input.first().json.Geburtsort,\n    country: country,\n    countryCode: countryCode\n  }\n}];"
+      },
+      "id": "map-country",
+      "name": "Map Country Code",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://api.geonames.org/searchJSON?q={{ encodeURIComponent($json.city) }}&country={{ $json.countryCode }}&maxRows=1&username={{ $env.GEONAMES_USERNAME }}",
+        "options": {}
+      },
+      "id": "search-city",
+      "name": "Search City",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://api.geonames.org/timezoneJSON?lat={{ $json.geonames[0].lat }}&lng={{ $json.geonames[0].lng }}&username={{ $env.GEONAMES_USERNAME }}",
+        "options": {}
+      },
+      "id": "get-timezone",
+      "name": "Get Timezone",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"timezone\": $json.timezoneId, \"gmtOffset\": $json.gmtOffset, \"dstOffset\": $json.dstOffset, \"rawOffset\": $json.rawOffset, \"countryCode\": $json.countryCode, \"countryName\": $json.countryName } }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [880, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Map Country Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Country Code": {
+      "main": [
+        [
+          {
+            "node": "Search City",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search City": {
+      "main": [
+        [
+          {
+            "node": "Get Timezone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Timezone": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

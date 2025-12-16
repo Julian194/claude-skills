@@ -38,6 +38,11 @@ Usage:
 Commands:
   workflows                    List all workflows
   workflow <id>                Get workflow definition (show all nodes)
+  workflow create <file.json>  Create workflow from JSON file
+  workflow update <id> <file>  Update workflow from JSON file
+  workflow delete <id>         Delete a workflow
+  workflow activate <id>       Activate a workflow
+  workflow deactivate <id>     Deactivate a workflow
   executions <workflow-id>     List executions for a workflow
   execution <id>               Get execution details (all nodes)
   errors [--limit <n>]         List recent failed executions
@@ -266,7 +271,68 @@ async function main() {
       }
 
       case 'workflow': {
-        const workflowId = parsed.commandArgs[0];
+        const subCommand = parsed.commandArgs[0];
+
+        if (subCommand === 'create') {
+          const filePath = parsed.commandArgs[1];
+          if (!filePath) {
+            console.error('Usage: n8ncli <workspace> workflow create <file.json>');
+            process.exit(1);
+          }
+          const workflowData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+          const created = await client.createWorkflow(workflowData);
+          console.log(`Workflow created: ${created.name} (ID: ${created.id})`);
+          break;
+        }
+
+        if (subCommand === 'update') {
+          const workflowId = parsed.commandArgs[1];
+          const filePath = parsed.commandArgs[2];
+          if (!workflowId || !filePath) {
+            console.error('Usage: n8ncli <workspace> workflow update <id> <file.json>');
+            process.exit(1);
+          }
+          const workflowData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+          const updated = await client.updateWorkflow(workflowId, workflowData);
+          console.log(`Workflow updated: ${updated.name} (ID: ${updated.id})`);
+          break;
+        }
+
+        if (subCommand === 'delete') {
+          const workflowId = parsed.commandArgs[1];
+          if (!workflowId) {
+            console.error('Usage: n8ncli <workspace> workflow delete <id>');
+            process.exit(1);
+          }
+          await client.deleteWorkflow(workflowId);
+          console.log(`Workflow ${workflowId} deleted.`);
+          break;
+        }
+
+        if (subCommand === 'activate') {
+          const workflowId = parsed.commandArgs[1];
+          if (!workflowId) {
+            console.error('Usage: n8ncli <workspace> workflow activate <id>');
+            process.exit(1);
+          }
+          const result = await client.activateWorkflow(workflowId);
+          console.log(`Workflow ${result.name} activated.`);
+          break;
+        }
+
+        if (subCommand === 'deactivate') {
+          const workflowId = parsed.commandArgs[1];
+          if (!workflowId) {
+            console.error('Usage: n8ncli <workspace> workflow deactivate <id>');
+            process.exit(1);
+          }
+          const result = await client.deactivateWorkflow(workflowId);
+          console.log(`Workflow ${result.name} deactivated.`);
+          break;
+        }
+
+        // Default: get workflow by ID
+        const workflowId = subCommand;
         if (!workflowId) {
           console.error('Usage: n8ncli <workspace> workflow <id>');
           process.exit(1);

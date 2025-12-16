@@ -70,4 +70,61 @@ export class N8nClient {
   async getWorkflow(workflowId) {
     return this.request(`/workflows/${workflowId}`);
   }
+
+  /**
+   * Create a new workflow
+   * @param {object} workflow - Workflow definition
+   * @param {string} workflow.name - Workflow name
+   * @param {array} workflow.nodes - Array of node definitions
+   * @param {object} workflow.connections - Node connections
+   * @param {object} workflow.settings - Workflow settings
+   */
+  async createWorkflow(workflow) {
+    return this.request('/workflows', {
+      method: 'POST',
+      body: JSON.stringify(workflow),
+    });
+  }
+
+  /**
+   * Update an existing workflow
+   * @param {string} workflowId - Workflow ID
+   * @param {object} workflow - Updated workflow definition
+   */
+  async updateWorkflow(workflowId, workflow) {
+    return this.request(`/workflows/${workflowId}`, {
+      method: 'PUT',
+      body: JSON.stringify(workflow),
+    });
+  }
+
+  /**
+   * Delete a workflow
+   * @param {string} workflowId - Workflow ID
+   */
+  async deleteWorkflow(workflowId) {
+    return this.request(`/workflows/${workflowId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Activate a workflow
+   * @param {string} workflowId - Workflow ID
+   */
+  async activateWorkflow(workflowId) {
+    return this.request(`/workflows/${workflowId}/activate`, {
+      method: 'POST',
+    });
+  }
+
+  /**
+   * Deactivate a workflow
+   * @param {string} workflowId - Workflow ID
+   */
+  async deactivateWorkflow(workflowId) {
+    return this.request(`/workflows/${workflowId}/deactivate`, {
+      method: 'POST',
+    });
+  }
 }
