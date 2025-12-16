@@ -65,6 +65,13 @@ export class N8nClient {
   }
 
   /**
+   * List all projects
+   */
+  async listProjects() {
+    return this.request('/projects');
+  }
+
+  /**
    * Get a single workflow by ID
    */
   async getWorkflow(workflowId) {

@@ -43,6 +43,7 @@ Commands:
   workflow delete <id>         Delete a workflow
   workflow activate <id>       Activate a workflow
   workflow deactivate <id>     Deactivate a workflow
+  projects                     List all projects
   executions <workflow-id>     List executions for a workflow
   execution <id>               Get execution details (all nodes)
   errors [--limit <n>]         List recent failed executions
@@ -50,6 +51,7 @@ Commands:
 Options:
   --limit <n>        Number of results (default: 10)
   --status <status>  Filter by status: success, error, waiting
+  --project <id>     Project ID for workflow create
   --node <name>      Filter/show specific node by name
   --verbose          Show full node data (default: compact summary)
   --errors           Only show failed nodes
@@ -176,6 +178,7 @@ function parseArgs(args) {
     full: false,
     json: false,
     filter: null,
+    project: null,
   };
 
   let i = 0;
@@ -212,6 +215,8 @@ function parseArgs(args) {
       parsed.json = true;
     } else if (arg === '--filter' && args[i + 1]) {
       parsed.filter = args[++i];
+    } else if (arg === '--project' && args[i + 1]) {
+      parsed.project = args[++i];
     } else if (!arg.startsWith('--')) {
       parsed.commandArgs.push(arg);
     }
@@ -270,16 +275,36 @@ async function main() {
         break;
       }
 
+      case 'projects': {
+        const response = await client.listProjects();
+        const projects = response.data || response;
+
+        if (parsed.json) {
+          const filepath = writeJsonToTemp(projects, 'projects');
+          console.log(`JSON written to: ${filepath}`);
+        } else {
+          console.log('\nProjects:\n');
+          console.log('ID\tNAME\tTYPE');
+          for (const proj of projects) {
+            console.log(`${proj.id}\t${proj.name}\t${proj.type || '-'}`);
+          }
+        }
+        break;
+      }
+
       case 'workflow': {
         const subCommand = parsed.commandArgs[0];
 
         if (subCommand === 'create') {
           const filePath = parsed.commandArgs[1];
           if (!filePath) {
-            console.error('Usage: n8ncli <workspace> workflow create <file.json>');
+            console.error('Usage: n8ncli <workspace> workflow create <file.json> [--project <id>]');
             process.exit(1);
           }
           const workflowData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+          if (parsed.project) {
+            workflowData.projectId = parsed.project;
+          }
           const created = await client.createWorkflow(workflowData);
           console.log(`Workflow created: ${created.name} (ID: ${created.id})`);
           break;
