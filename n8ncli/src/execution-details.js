@@ -57,6 +57,7 @@ export function extractAllNodeData(execution) {
         executionTime: run.executionTime,
         input: extractNodeInput(run),
         output: extractNodeOutput(run),
+        error: extractNodeError(run),
       };
 
       details.nodes.push(nodeData);
@@ -79,6 +80,20 @@ function extractNodeInput(run) {
     return source.map(s => s.previousNode).filter(Boolean);
   }
   return null;
+}
+
+/**
+ * Extract error information from a node run
+ */
+function extractNodeError(run) {
+  if (!run.error) return null;
+
+  return {
+    message: run.error.message || 'Unknown error',
+    description: run.error.description || null,
+    name: run.error.name || null,
+    stack: run.error.stack || null,
+  };
 }
 
 /**
@@ -125,6 +140,14 @@ export function formatCompactSummary(details) {
     const outputSize = node.output ? formatBytes(JSON.stringify(node.output).length) : '-';
 
     lines.push(`${name.padEnd(35)} ${status.padEnd(10)} ${time.padEnd(10)} ${outputSize}`);
+
+    // Show error message if present
+    if (node.error) {
+      lines.push(`  └─ Error: ${node.error.message}`);
+      if (node.error.description) {
+        lines.push(`     ${node.error.description}`);
+      }
+    }
   }
 
   lines.push(`${'─'.repeat(70)}`);
@@ -184,6 +207,14 @@ export function formatAllNodeData(details, options = {}) {
 
     if (node.input) {
       lines.push(`  Input from: ${node.input.join(', ')}`);
+    }
+
+    // Show error details if present
+    if (node.error) {
+      lines.push(`  ❌ Error: ${node.error.message}`);
+      if (node.error.description) {
+        lines.push(`     Hint: ${node.error.description}`);
+      }
     }
 
     if (node.output) {

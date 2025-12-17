@@ -1,6 +1,6 @@
 ---
 name: n8ncli
-description: N8N workflow monitoring CLI - list workflows, analyze executions, track errors across multiple instances. Use when user asks about n8n workflows, executions, or errors.
+description: N8N workflow CLI - create/update/manage workflows, analyze executions, track errors across multiple instances. Use when user asks about n8n workflows, executions, errors, or wants to create/modify workflows via API.
 ---
 
 # N8N CLI
@@ -60,6 +60,25 @@ node {baseDir}/src/cli.js <workspace> execution <execution-id> --ai
 
 # List recent errors across all workflows
 node {baseDir}/src/cli.js <workspace> errors --limit 20
+
+# Get workflow definition
+node {baseDir}/src/cli.js <workspace> workflow <workflow-id>
+
+# Get workflow as JSON (for modification)
+node {baseDir}/src/cli.js <workspace> workflow <workflow-id> --json
+
+# Create workflow from JSON file
+node {baseDir}/src/cli.js <workspace> workflow create <file.json>
+
+# Update workflow from JSON file
+node {baseDir}/src/cli.js <workspace> workflow update <workflow-id> <file.json>
+
+# Activate/deactivate workflow
+node {baseDir}/src/cli.js <workspace> workflow activate <workflow-id>
+node {baseDir}/src/cli.js <workspace> workflow deactivate <workflow-id>
+
+# Delete workflow
+node {baseDir}/src/cli.js <workspace> workflow delete <workflow-id>
 ```
 
 ## Options
@@ -114,3 +133,8 @@ By default, `execution` shows a **compact summary table**:
 - User asks about token usage in AI workflows
 - Debugging failed workflow executions
 - Inspecting node inputs/outputs
+- Creating or modifying workflows programmatically
+
+## Additional Docs
+
+When creating/modifying workflows via JSON, read `{baseDir}/docs/n8n-gotchas.md` for common pitfalls (Loop Over Items outputs, AI Agent promptType, etc.)
