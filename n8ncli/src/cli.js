@@ -74,7 +74,11 @@ Examples:
   n8ncli myworkspace workflows
   n8ncli myworkspace workflow abc123 --pinned         # Show test data
   n8ncli myworkspace workflow set-code abc123 "Code" ./format.js
+  n8ncli myworkspace workflow set-setting abc123 errorWorkflow xyz789
+  n8ncli myworkspace workflow add-tag abc123 skip-monitoring
   n8ncli myworkspace workflow diff abc123 def456      # Compare workflows
+  n8ncli myworkspace search ntfy                      # Find workflows using ntfy
+  n8ncli myworkspace clone abc123 other-workspace     # Clone to another workspace
   n8ncli myworkspace executions abc123 --limit 5
   n8ncli myworkspace execution 123                    # Compact summary
   n8ncli myworkspace execution 123 --node "AI Agent"  # Specific node

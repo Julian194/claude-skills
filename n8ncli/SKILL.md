@@ -97,6 +97,9 @@ node {baseDir}/src/cli.js <workspace> search "HTTP Request"
 # Clone workflow to another workspace
 node {baseDir}/src/cli.js <workspace> clone <workflow-id> <target-workspace>
 
+# List projects
+node {baseDir}/src/cli.js <workspace> projects
+
 # Activate/deactivate workflow
 node {baseDir}/src/cli.js <workspace> workflow activate <workflow-id>
 node {baseDir}/src/cli.js <workspace> workflow deactivate <workflow-id>
