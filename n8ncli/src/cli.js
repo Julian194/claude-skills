@@ -45,6 +45,9 @@ Commands:
   workflow activate <id>       Activate a workflow
   workflow deactivate <id>     Deactivate a workflow
   workflow set-code <id> <node> <file.js>  Update code node from JS file
+  workflow set-setting <id> <key> <value> Update a workflow setting
+  workflow add-tag <id> <tag>  Add a tag to a workflow
+  workflow remove-tag <id> <tag> Remove a tag from a workflow
   workflow diff <id1> <id2>    Compare two workflows
   projects                     List all projects
   executions <workflow-id>     List executions for a workflow
@@ -511,6 +514,111 @@ async function main() {
             const filepath = writeJsonToTemp(diffData, `diff-${id1}-${id2}`);
             console.log(`\nFull diff written to: ${filepath}`);
           }
+          break;
+        }
+
+        if (subCommand === 'set-setting') {
+          const workflowId = parsed.commandArgs[1];
+          const settingKey = parsed.commandArgs[2];
+          const settingValue = parsed.commandArgs[3];
+          if (!workflowId || !settingKey || settingValue === undefined) {
+            console.error('Usage: n8ncli <workspace> workflow set-setting <id> <key> <value>');
+            console.error('Example: n8ncli big workflow set-setting abc123 errorWorkflow xyz789');
+            process.exit(1);
+          }
+
+          const workflow = await client.getWorkflow(workflowId);
+
+          // Update the setting
+          workflow.settings = workflow.settings || {};
+          // Handle "null" or "none" to remove a setting
+          if (settingValue === 'null' || settingValue === 'none') {
+            delete workflow.settings[settingKey];
+          } else {
+            workflow.settings[settingKey] = settingValue;
+          }
+
+          const updatePayload = {
+            name: workflow.name,
+            nodes: workflow.nodes.map(node => ({
+              id: node.id,
+              name: node.name,
+              type: node.type,
+              typeVersion: node.typeVersion,
+              position: node.position,
+              parameters: node.parameters,
+              credentials: node.credentials,
+              webhookId: node.webhookId,
+            })),
+            connections: workflow.connections,
+            settings: workflow.settings,
+          };
+
+          const updated = await client.updateWorkflow(workflowId, updatePayload);
+          console.log(`Set ${settingKey}=${settingValue} on workflow "${updated.name}"`);
+          break;
+        }
+
+        if (subCommand === 'add-tag') {
+          const workflowId = parsed.commandArgs[1];
+          const tagName = parsed.commandArgs[2];
+          if (!workflowId || !tagName) {
+            console.error('Usage: n8ncli <workspace> workflow add-tag <id> <tag-name>');
+            process.exit(1);
+          }
+
+          // Get or create the tag
+          let allTags = await client.listTags();
+          let tag = allTags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+
+          if (!tag) {
+            tag = await client.createTag(tagName);
+            console.log(`Created tag "${tagName}"`);
+          }
+
+          // Get existing workflow tags and add the new one
+          const workflow = await client.getWorkflow(workflowId);
+          const existingTagIds = (workflow.tags || []).map(t => t.id);
+
+          if (existingTagIds.includes(tag.id)) {
+            console.log(`Workflow "${workflow.name}" already has tag "${tagName}"`);
+            break;
+          }
+
+          await client.setWorkflowTags(workflowId, [...existingTagIds, tag.id]);
+          console.log(`Added tag "${tagName}" to workflow "${workflow.name}"`);
+          break;
+        }
+
+        if (subCommand === 'remove-tag') {
+          const workflowId = parsed.commandArgs[1];
+          const tagName = parsed.commandArgs[2];
+          if (!workflowId || !tagName) {
+            console.error('Usage: n8ncli <workspace> workflow remove-tag <id> <tag-name>');
+            process.exit(1);
+          }
+
+          // Find the tag
+          const allTags = await client.listTags();
+          const tag = allTags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+
+          if (!tag) {
+            console.error(`Tag "${tagName}" not found`);
+            process.exit(1);
+          }
+
+          // Get existing workflow tags and remove this one
+          const workflow = await client.getWorkflow(workflowId);
+          const existingTagIds = (workflow.tags || []).map(t => t.id);
+
+          if (!existingTagIds.includes(tag.id)) {
+            console.log(`Workflow "${workflow.name}" doesn't have tag "${tagName}"`);
+            break;
+          }
+
+          const newTagIds = existingTagIds.filter(id => id !== tag.id);
+          await client.setWorkflowTags(workflowId, newTagIds);
+          console.log(`Removed tag "${tagName}" from workflow "${workflow.name}"`);
           break;
         }
 

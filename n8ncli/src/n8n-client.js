@@ -134,4 +134,44 @@ export class N8nClient {
       method: 'POST',
     });
   }
+
+  /**
+   * List all tags
+   */
+  async listTags() {
+    const response = await this.request('/tags');
+    return response.data || response;
+  }
+
+  /**
+   * Create a new tag
+   * @param {string} name - Tag name
+   */
+  async createTag(name) {
+    return this.request('/tags', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  /**
+   * Get tags for a workflow
+   * @param {string} workflowId - Workflow ID
+   */
+  async getWorkflowTags(workflowId) {
+    const workflow = await this.getWorkflow(workflowId);
+    return workflow.tags || [];
+  }
+
+  /**
+   * Set tags for a workflow (replaces all existing tags)
+   * @param {string} workflowId - Workflow ID
+   * @param {Array} tagIds - Array of tag IDs
+   */
+  async setWorkflowTags(workflowId, tagIds) {
+    return this.request(`/workflows/${workflowId}/tags`, {
+      method: 'PUT',
+      body: JSON.stringify(tagIds.map(id => ({ id }))),
+    });
+  }
 }

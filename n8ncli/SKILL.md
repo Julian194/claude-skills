@@ -82,6 +82,14 @@ node {baseDir}/src/cli.js <workspace> workflow set-code <workflow-id> "Code Node
 # Compare two workflows
 node {baseDir}/src/cli.js <workspace> workflow diff <id1> <id2>
 
+# Update a workflow setting
+node {baseDir}/src/cli.js <workspace> workflow set-setting <id> <key> <value>
+node {baseDir}/src/cli.js <workspace> workflow set-setting abc123 errorWorkflow xyz789
+
+# Manage workflow tags
+node {baseDir}/src/cli.js <workspace> workflow add-tag <id> <tag-name>
+node {baseDir}/src/cli.js <workspace> workflow remove-tag <id> <tag-name>
+
 # Activate/deactivate workflow
 node {baseDir}/src/cli.js <workspace> workflow activate <workflow-id>
 node {baseDir}/src/cli.js <workspace> workflow deactivate <workflow-id>
