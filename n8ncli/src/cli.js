@@ -331,6 +331,25 @@ async function main() {
             process.exit(1);
           }
           const workflowData = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+
+          // Preserve credentials from existing workflow
+          const existing = await client.getWorkflow(workflowId);
+          const existingCreds = new Map();
+          for (const node of (existing.nodes || [])) {
+            if (node.credentials) {
+              existingCreds.set(node.name, node.credentials);
+            }
+          }
+
+          // Merge credentials into new nodes by name
+          if (workflowData.nodes) {
+            for (const node of workflowData.nodes) {
+              if (!node.credentials && existingCreds.has(node.name)) {
+                node.credentials = existingCreds.get(node.name);
+              }
+            }
+          }
+
           const updated = await client.updateWorkflow(workflowId, workflowData);
           console.log(`Workflow updated: ${updated.name} (ID: ${updated.id})`);
           break;
