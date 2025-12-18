@@ -38,11 +38,14 @@ Usage:
 Commands:
   workflows                    List all workflows
   workflow <id>                Get workflow definition (show all nodes)
+  workflow <id> --pinned       Show pinned/test data for a workflow
   workflow create <file.json>  Create workflow from JSON file
   workflow update <id> <file>  Update workflow from JSON file
   workflow delete <id>         Delete a workflow
   workflow activate <id>       Activate a workflow
   workflow deactivate <id>     Deactivate a workflow
+  workflow set-code <id> <node> <file.js>  Update code node from JS file
+  workflow diff <id1> <id2>    Compare two workflows
   projects                     List all projects
   executions <workflow-id>     List executions for a workflow
   execution <id>               Get execution details (all nodes)
@@ -58,11 +61,15 @@ Options:
   --ai               Show AI-specific data (tokens, prompts, LLM outputs)
   --full             Show full output text (not truncated)
   --json             Write JSON to temp file, return path (context-efficient)
+  --pinned           Show pinned/test data for a workflow
   --filter <k=v>     Filter executions by customData (e.g. --filter "airtable_id=xyz")
 
 Examples:
   n8ncli accounts add myworkspace
   n8ncli myworkspace workflows
+  n8ncli myworkspace workflow abc123 --pinned         # Show test data
+  n8ncli myworkspace workflow set-code abc123 "Code" ./format.js
+  n8ncli myworkspace workflow diff abc123 def456      # Compare workflows
   n8ncli myworkspace executions abc123 --limit 5
   n8ncli myworkspace execution 123                    # Compact summary
   n8ncli myworkspace execution 123 --node "AI Agent"  # Specific node
@@ -179,6 +186,7 @@ function parseArgs(args) {
     json: false,
     filter: null,
     project: null,
+    pinned: false,
   };
 
   let i = 0;
@@ -217,6 +225,8 @@ function parseArgs(args) {
       parsed.filter = args[++i];
     } else if (arg === '--project' && args[i + 1]) {
       parsed.project = args[++i];
+    } else if (arg === '--pinned') {
+      parsed.pinned = true;
     } else if (!arg.startsWith('--')) {
       parsed.commandArgs.push(arg);
     }
@@ -356,6 +366,154 @@ async function main() {
           break;
         }
 
+        if (subCommand === 'set-code') {
+          const workflowId = parsed.commandArgs[1];
+          const nodeName = parsed.commandArgs[2];
+          const jsFilePath = parsed.commandArgs[3];
+          if (!workflowId || !nodeName || !jsFilePath) {
+            console.error('Usage: n8ncli <workspace> workflow set-code <id> <node-name> <file.js>');
+            process.exit(1);
+          }
+
+          // Read JS file
+          if (!fs.existsSync(jsFilePath)) {
+            console.error(`File not found: ${jsFilePath}`);
+            process.exit(1);
+          }
+          const jsCode = fs.readFileSync(jsFilePath, 'utf-8');
+
+          // Get workflow
+          const workflow = await client.getWorkflow(workflowId);
+
+          // Find node by name
+          const nodeIndex = workflow.nodes.findIndex(n => n.name === nodeName);
+          if (nodeIndex === -1) {
+            console.error(`Node "${nodeName}" not found in workflow. Available nodes:`);
+            workflow.nodes.forEach(n => console.error(`  - ${n.name}`));
+            process.exit(1);
+          }
+
+          const node = workflow.nodes[nodeIndex];
+          if (!node.type.includes('code')) {
+            console.error(`Node "${nodeName}" is not a code node (type: ${node.type})`);
+            process.exit(1);
+          }
+
+          // Update the code
+          workflow.nodes[nodeIndex].parameters.jsCode = jsCode;
+
+          // Strip fields that n8n API doesn't accept on update
+          // Only include fields that are allowed in the update endpoint
+          const updatePayload = {
+            name: workflow.name,
+            nodes: workflow.nodes.map(node => ({
+              id: node.id,
+              name: node.name,
+              type: node.type,
+              typeVersion: node.typeVersion,
+              position: node.position,
+              parameters: node.parameters,
+              credentials: node.credentials,
+              webhookId: node.webhookId,
+            })),
+            connections: workflow.connections,
+            settings: workflow.settings,
+          };
+
+          // Save workflow
+          const updated = await client.updateWorkflow(workflowId, updatePayload);
+          console.log(`Updated code in "${nodeName}" node of workflow "${updated.name}"`);
+          break;
+        }
+
+        if (subCommand === 'diff') {
+          const id1 = parsed.commandArgs[1];
+          const id2 = parsed.commandArgs[2];
+          if (!id1 || !id2) {
+            console.error('Usage: n8ncli <workspace> workflow diff <id1> <id2>');
+            process.exit(1);
+          }
+
+          const [wf1, wf2] = await Promise.all([
+            client.getWorkflow(id1),
+            client.getWorkflow(id2)
+          ]);
+
+          console.log(`\nComparing workflows:\n`);
+          console.log(`  [1] ${wf1.name} (${id1})`);
+          console.log(`  [2] ${wf2.name} (${id2})\n`);
+
+          // Compare nodes
+          const nodes1 = new Map(wf1.nodes.map(n => [n.name, n]));
+          const nodes2 = new Map(wf2.nodes.map(n => [n.name, n]));
+
+          const allNodeNames = new Set([...nodes1.keys(), ...nodes2.keys()]);
+
+          const added = [];
+          const removed = [];
+          const modified = [];
+          const unchanged = [];
+
+          for (const name of allNodeNames) {
+            const n1 = nodes1.get(name);
+            const n2 = nodes2.get(name);
+
+            if (!n1) {
+              added.push(name);
+            } else if (!n2) {
+              removed.push(name);
+            } else {
+              // Compare parameters
+              const p1 = JSON.stringify(n1.parameters);
+              const p2 = JSON.stringify(n2.parameters);
+              if (p1 !== p2) {
+                modified.push(name);
+              } else {
+                unchanged.push(name);
+              }
+            }
+          }
+
+          if (added.length > 0) {
+            console.log(`Added in [2] (${added.length}):`);
+            added.forEach(n => console.log(`  + ${n}`));
+            console.log();
+          }
+
+          if (removed.length > 0) {
+            console.log(`Removed in [2] (${removed.length}):`);
+            removed.forEach(n => console.log(`  - ${n}`));
+            console.log();
+          }
+
+          if (modified.length > 0) {
+            console.log(`Modified (${modified.length}):`);
+            modified.forEach(n => console.log(`  ~ ${n}`));
+            console.log();
+          }
+
+          console.log(`Unchanged: ${unchanged.length} nodes`);
+
+          // If --json, write full diff to file
+          if (parsed.json) {
+            const diffData = {
+              workflow1: { id: id1, name: wf1.name },
+              workflow2: { id: id2, name: wf2.name },
+              added: added.map(name => nodes2.get(name)),
+              removed: removed.map(name => nodes1.get(name)),
+              modified: modified.map(name => ({
+                name,
+                before: nodes1.get(name),
+                after: nodes2.get(name)
+              })),
+              unchanged: unchanged
+            };
+            const filepath = writeJsonToTemp(diffData, `diff-${id1}-${id2}`);
+            console.log(`\nFull diff written to: ${filepath}`);
+          }
+          break;
+        }
+
         // Default: get workflow by ID
         const workflowId = subCommand;
         if (!workflowId) {
@@ -365,6 +523,37 @@ async function main() {
 
         const workflow = await client.getWorkflow(workflowId);
 
+        // Handle --pinned flag
+        if (parsed.pinned) {
+          const pinData = workflow.pinData;
+          if (!pinData || Object.keys(pinData).length === 0) {
+            console.log(`No pinned data found in workflow "${workflow.name}"`);
+            break;
+          }
+
+          if (parsed.json) {
+            const filepath = writeJsonToTemp(pinData, `pinned-${workflowId}`);
+            console.log(`JSON written to: ${filepath}`);
+          } else {
+            console.log(`\nPinned data for: ${workflow.name}\n`);
+            for (const [nodeName, data] of Object.entries(pinData)) {
+              console.log(`━━━ ${nodeName} ━━━`);
+              if (Array.isArray(data)) {
+                console.log(`Items: ${data.length}`);
+                for (let i = 0; i < data.length; i++) {
+                  console.log(`\n[Item ${i}]`);
+                  const item = data[i].json || data[i];
+                  console.log(JSON.stringify(item, null, 2));
+                }
+              } else {
+                console.log(JSON.stringify(data, null, 2));
+              }
+              console.log();
+            }
+          }
+          break;
+        }
+
         if (parsed.json) {
           const filepath = writeJsonToTemp(workflow, `workflow-${workflowId}`);
           console.log(`JSON written to: ${filepath}`);
@@ -372,6 +561,13 @@ async function main() {
           console.log(`\nWorkflow: ${workflow.name}`);
           console.log(`ID: ${workflow.id}`);
           console.log(`Status: ${workflow.active ? 'active' : 'inactive'}`);
+
+          // Show if pinned data exists
+          const pinnedNodes = workflow.pinData ? Object.keys(workflow.pinData) : [];
+          if (pinnedNodes.length > 0) {
+            console.log(`Pinned data: ${pinnedNodes.join(', ')} (use --pinned to view)`);
+          }
+
           console.log(`\nNodes (${workflow.nodes?.length || 0}):\n`);
 
           if (workflow.nodes && workflow.nodes.length > 0) {

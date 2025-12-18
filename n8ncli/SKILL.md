@@ -67,11 +67,20 @@ node {baseDir}/src/cli.js <workspace> workflow <workflow-id>
 # Get workflow as JSON (for modification)
 node {baseDir}/src/cli.js <workspace> workflow <workflow-id> --json
 
+# View pinned/test data for a workflow
+node {baseDir}/src/cli.js <workspace> workflow <workflow-id> --pinned
+
 # Create workflow from JSON file
 node {baseDir}/src/cli.js <workspace> workflow create <file.json>
 
 # Update workflow from JSON file
 node {baseDir}/src/cli.js <workspace> workflow update <workflow-id> <file.json>
+
+# Update code node from JS file (avoids JSON escaping pain)
+node {baseDir}/src/cli.js <workspace> workflow set-code <workflow-id> "Code Node Name" ./code.js
+
+# Compare two workflows
+node {baseDir}/src/cli.js <workspace> workflow diff <id1> <id2>
 
 # Activate/deactivate workflow
 node {baseDir}/src/cli.js <workspace> workflow activate <workflow-id>
@@ -97,6 +106,9 @@ node {baseDir}/src/cli.js <workspace> workflow delete <workflow-id>
 
 **Output to file (raw data):**
 - `--json` - Write raw JSON to temp file, return path only
+
+**Workflow inspection:**
+- `--pinned` - Show pinned/test data for a workflow
 
 ## Output Modes
 
@@ -137,4 +149,6 @@ By default, `execution` shows a **compact summary table**:
 
 ## Additional Docs
 
-When creating/modifying workflows via JSON, read `{baseDir}/docs/n8n-gotchas.md` for common pitfalls (Loop Over Items outputs, AI Agent promptType, etc.)
+When creating/modifying workflows via JSON:
+- `{baseDir}/docs/n8n-gotchas.md` - Common pitfalls (Loop Over Items outputs, AI Agent promptType, etc.)
+- `{baseDir}/docs/node-parameters.md` - Quick reference for common node parameters (HTTP Request, Code, Slack, etc.)
