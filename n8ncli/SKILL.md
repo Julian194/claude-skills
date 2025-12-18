@@ -90,6 +90,13 @@ node {baseDir}/src/cli.js <workspace> workflow set-setting abc123 errorWorkflow 
 node {baseDir}/src/cli.js <workspace> workflow add-tag <id> <tag-name>
 node {baseDir}/src/cli.js <workspace> workflow remove-tag <id> <tag-name>
 
+# Search workflows for text or node types
+node {baseDir}/src/cli.js <workspace> search ntfy
+node {baseDir}/src/cli.js <workspace> search "HTTP Request"
+
+# Clone workflow to another workspace
+node {baseDir}/src/cli.js <workspace> clone <workflow-id> <target-workspace>
+
 # Activate/deactivate workflow
 node {baseDir}/src/cli.js <workspace> workflow activate <workflow-id>
 node {baseDir}/src/cli.js <workspace> workflow deactivate <workflow-id>

@@ -49,6 +49,8 @@ Commands:
   workflow add-tag <id> <tag>  Add a tag to a workflow
   workflow remove-tag <id> <tag> Remove a tag from a workflow
   workflow diff <id1> <id2>    Compare two workflows
+  search <query>               Search workflows for text or node types
+  clone <workspace:id> <target-workspace>  Clone workflow to another workspace
   projects                     List all projects
   executions <workflow-id>     List executions for a workflow
   execution <id>               Get execution details (all nodes)
@@ -704,6 +706,100 @@ async function main() {
             }
           }
         }
+        break;
+      }
+
+      case 'search': {
+        const query = parsed.commandArgs[0];
+        if (!query) {
+          console.error('Usage: n8ncli <workspace> search <query>');
+          console.error('Examples:');
+          console.error('  n8ncli big search ntfy');
+          console.error('  n8ncli big search "HTTP Request"');
+          process.exit(1);
+        }
+
+        const response = await client.listWorkflows();
+        const workflows = response.data || response;
+
+        console.log(`\nSearching for "${query}"...\n`);
+
+        const matches = [];
+        for (const wfSummary of workflows) {
+          const wf = await client.getWorkflow(wfSummary.id);
+          const wfString = JSON.stringify(wf).toLowerCase();
+
+          if (wfString.includes(query.toLowerCase())) {
+            // Find which nodes match
+            const matchingNodes = (wf.nodes || [])
+              .filter(n => JSON.stringify(n).toLowerCase().includes(query.toLowerCase()))
+              .map(n => n.name);
+
+            matches.push({
+              id: wf.id,
+              name: wf.name,
+              active: wf.active,
+              nodes: matchingNodes
+            });
+          }
+        }
+
+        if (matches.length === 0) {
+          console.log('No matches found.');
+        } else {
+          console.log(`Found ${matches.length} workflow(s):\n`);
+          for (const m of matches) {
+            const status = m.active ? 'active' : 'inactive';
+            console.log(`• ${m.name} (${m.id}) [${status}]`);
+            if (m.nodes.length > 0) {
+              console.log(`  Matching nodes: ${m.nodes.join(', ')}`);
+            }
+          }
+        }
+        break;
+      }
+
+      case 'clone': {
+        const source = parsed.commandArgs[0];
+        const targetWorkspace = parsed.commandArgs[1];
+
+        if (!source || !targetWorkspace) {
+          console.error('Usage: n8ncli <workspace> clone <source-id> <target-workspace>');
+          console.error('Example: n8ncli big clone uib8tUrlBuTMlcdw universalintelligence');
+          process.exit(1);
+        }
+
+        // Get source workflow
+        const sourceWf = await client.getWorkflow(source);
+        console.log(`Cloning "${sourceWf.name}" to ${targetWorkspace}...`);
+
+        // Get target workspace client
+        const targetAccount = getAccount(targetWorkspace);
+        if (!targetAccount) {
+          console.error(`Target workspace "${targetWorkspace}" not found.`);
+          process.exit(1);
+        }
+        const targetClient = new N8nClient(targetAccount.url, targetAccount.apiKey);
+
+        // Prepare workflow for target (strip IDs, credentials, etc.)
+        const cloneData = {
+          name: sourceWf.name,
+          nodes: sourceWf.nodes.map(node => ({
+            id: node.id,
+            name: node.name,
+            type: node.type,
+            typeVersion: node.typeVersion,
+            position: node.position,
+            parameters: node.parameters,
+            // Don't copy credentials - they won't exist in target
+          })),
+          connections: sourceWf.connections,
+          settings: sourceWf.settings || { executionOrder: 'v1' },
+        };
+
+        const created = await targetClient.createWorkflow(cloneData);
+        console.log(`Created: ${created.name} (ID: ${created.id}) in ${targetWorkspace}`);
+        console.log(`Note: Credentials need to be configured manually.`);
         break;
       }
 
