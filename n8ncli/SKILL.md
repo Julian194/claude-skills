@@ -152,9 +152,35 @@ By default, `execution` shows a **compact summary table**:
 - Token-efficient for context
 - Use `--node` to drill into specific nodes
 
+## Templates
+
+Save workflows as reusable templates for version control and deployment across workspaces.
+
+```bash
+# List saved templates
+node {baseDir}/src/cli.js templates list
+
+# Save a workflow as template
+node {baseDir}/src/cli.js templates save <workspace> <workflow-id> [name]
+
+# Show template details
+node {baseDir}/src/cli.js templates show <name>
+
+# Deploy template to a workspace
+node {baseDir}/src/cli.js templates deploy <name> <workspace>
+```
+
+**Custom templates directory** (for git-backed templates):
+```bash
+export N8NCLI_TEMPLATES_DIR=~/code/n8n-templates
+```
+
+Templates strip credentials (instance-specific) but preserve pinned test data.
+
 ## Data Storage
 
 - `~/.n8ncli/accounts.json` - Workspace credentials
+- `~/.n8ncli/templates/` - Workflow templates (or `N8NCLI_TEMPLATES_DIR`)
 
 ## When to Use
 

@@ -11,6 +11,7 @@ import readline from 'readline';
 const CONFIG_DIR = path.join(os.homedir(), '.n8ncli');
 const ACCOUNTS_FILE = path.join(CONFIG_DIR, 'accounts.json');
 const TEMP_DIR = path.join(os.tmpdir(), 'n8ncli');
+const TEMPLATES_DIR = process.env.N8NCLI_TEMPLATES_DIR || path.join(CONFIG_DIR, 'templates');
 
 /**
  * Write JSON to temp file and return the path (context-efficient)
@@ -55,6 +56,12 @@ Commands:
   executions <workflow-id>     List executions for a workflow
   execution <id>               Get execution details (all nodes)
   errors [--limit <n>]         List recent failed executions
+
+Template commands (no workspace required):
+  templates list               List saved templates
+  templates save <workspace> <workflow-id> [name]  Save workflow as template
+  templates show <name>        Show template details
+  templates deploy <name> <workspace>  Deploy template to workspace
 
 Options:
   --limit <n>        Number of results (default: 10)
@@ -123,6 +130,204 @@ function prompt(question) {
       resolve(answer.trim());
     });
   });
+}
+
+// Template helpers
+function ensureTemplatesDir() {
+  if (!fs.existsSync(TEMPLATES_DIR)) {
+    fs.mkdirSync(TEMPLATES_DIR, { recursive: true });
+  }
+}
+
+function listTemplates() {
+  ensureTemplatesDir();
+  const files = fs.readdirSync(TEMPLATES_DIR).filter(f => f.endsWith('.json'));
+  return files.map(f => {
+    const name = f.replace('.json', '');
+    const filepath = path.join(TEMPLATES_DIR, f);
+    const content = JSON.parse(fs.readFileSync(filepath, 'utf-8'));
+    return {
+      name,
+      workflowName: content.name,
+      nodeCount: content.nodes?.length || 0,
+      description: content._templateMeta?.description || '',
+      savedAt: content._templateMeta?.savedAt || null,
+      sourceWorkspace: content._templateMeta?.sourceWorkspace || null,
+    };
+  });
+}
+
+function saveTemplate(name, workflow, meta = {}) {
+  ensureTemplatesDir();
+  // Strip instance-specific data, keep structure
+  const template = {
+    name: workflow.name,
+    nodes: workflow.nodes.map(node => ({
+      id: node.id,
+      name: node.name,
+      type: node.type,
+      typeVersion: node.typeVersion,
+      position: node.position,
+      parameters: node.parameters,
+      // Deliberately omit credentials - they're instance-specific
+    })),
+    connections: workflow.connections,
+    settings: workflow.settings || { executionOrder: 'v1' },
+    pinData: workflow.pinData || {},
+    _templateMeta: {
+      savedAt: new Date().toISOString(),
+      sourceWorkflowId: workflow.id,
+      ...meta,
+    },
+  };
+  const filepath = path.join(TEMPLATES_DIR, `${name}.json`);
+  fs.writeFileSync(filepath, JSON.stringify(template, null, 2));
+  return filepath;
+}
+
+function loadTemplate(name) {
+  const filepath = path.join(TEMPLATES_DIR, `${name}.json`);
+  if (!fs.existsSync(filepath)) {
+    return null;
+  }
+  return JSON.parse(fs.readFileSync(filepath, 'utf-8'));
+}
+
+// Template commands
+async function handleTemplates(args) {
+  const action = args[0];
+
+  switch (action) {
+    case 'list': {
+      const templates = listTemplates();
+      if (templates.length === 0) {
+        console.log(`No templates found in ${TEMPLATES_DIR}`);
+        console.log('Save one with: n8ncli templates save <workspace> <workflow-id> [name]');
+      } else {
+        console.log(`\nTemplates (${TEMPLATES_DIR}):\n`);
+        console.log('NAME\tWORKFLOW\tNODES\tSAVED');
+        for (const t of templates) {
+          const saved = t.savedAt ? new Date(t.savedAt).toLocaleDateString() : '-';
+          console.log(`${t.name}\t${t.workflowName}\t${t.nodeCount}\t${saved}`);
+        }
+      }
+      break;
+    }
+
+    case 'save': {
+      const workspaceName = args[1];
+      const workflowId = args[2];
+      let templateName = args[3];
+
+      if (!workspaceName || !workflowId) {
+        console.error('Usage: n8ncli templates save <workspace> <workflow-id> [name]');
+        process.exit(1);
+      }
+
+      const account = getAccount(workspaceName);
+      if (!account) {
+        console.error(`Workspace "${workspaceName}" not found.`);
+        process.exit(1);
+      }
+
+      const client = new N8nClient(account.url, account.apiKey);
+      const workflow = await client.getWorkflow(workflowId);
+
+      // Default template name from workflow name (slugified)
+      if (!templateName) {
+        templateName = workflow.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '');
+      }
+
+      const filepath = saveTemplate(templateName, workflow, {
+        sourceWorkspace: workspaceName,
+        description: `Saved from ${workspaceName}:${workflowId}`,
+      });
+
+      console.log(`Template saved: ${templateName}`);
+      console.log(`File: ${filepath}`);
+      break;
+    }
+
+    case 'show': {
+      const name = args[1];
+      if (!name) {
+        console.error('Usage: n8ncli templates show <name>');
+        process.exit(1);
+      }
+
+      const template = loadTemplate(name);
+      if (!template) {
+        console.error(`Template "${name}" not found in ${TEMPLATES_DIR}`);
+        process.exit(1);
+      }
+
+      console.log(`\nTemplate: ${name}`);
+      console.log(`Workflow name: ${template.name}`);
+      if (template._templateMeta?.savedAt) {
+        console.log(`Saved: ${new Date(template._templateMeta.savedAt).toLocaleString()}`);
+      }
+      if (template._templateMeta?.sourceWorkspace) {
+        console.log(`Source: ${template._templateMeta.sourceWorkspace}:${template._templateMeta.sourceWorkflowId}`);
+      }
+      console.log(`\nNodes (${template.nodes?.length || 0}):\n`);
+      for (const node of (template.nodes || [])) {
+        const type = node.type?.replace('n8n-nodes-base.', '') || 'unknown';
+        console.log(`  • ${node.name} (${type})`);
+      }
+
+      const pinnedNodes = template.pinData ? Object.keys(template.pinData) : [];
+      if (pinnedNodes.length > 0) {
+        console.log(`\nPinned data: ${pinnedNodes.join(', ')}`);
+      }
+      break;
+    }
+
+    case 'deploy': {
+      const name = args[1];
+      const targetWorkspace = args[2];
+
+      if (!name || !targetWorkspace) {
+        console.error('Usage: n8ncli templates deploy <name> <workspace>');
+        process.exit(1);
+      }
+
+      const template = loadTemplate(name);
+      if (!template) {
+        console.error(`Template "${name}" not found in ${TEMPLATES_DIR}`);
+        process.exit(1);
+      }
+
+      const account = getAccount(targetWorkspace);
+      if (!account) {
+        console.error(`Workspace "${targetWorkspace}" not found.`);
+        process.exit(1);
+      }
+
+      const client = new N8nClient(account.url, account.apiKey);
+
+      // Prepare for deployment (strip template meta)
+      const deployData = {
+        name: template.name,
+        nodes: template.nodes,
+        connections: template.connections,
+        settings: template.settings,
+        pinData: template.pinData,
+      };
+
+      const created = await client.createWorkflow(deployData);
+      console.log(`Deployed: ${created.name} (ID: ${created.id}) to ${targetWorkspace}`);
+      console.log('Note: Credentials need to be configured manually.');
+      break;
+    }
+
+    default:
+      console.error('Unknown templates command. Use: list, save, show, deploy');
+      console.error(`Templates directory: ${TEMPLATES_DIR}`);
+      process.exit(1);
+  }
 }
 
 // Account commands
@@ -256,6 +461,12 @@ async function main() {
   // Handle accounts subcommand
   if (args[0] === 'accounts') {
     await handleAccounts(args.slice(1));
+    return;
+  }
+
+  // Handle templates subcommand
+  if (args[0] === 'templates') {
+    await handleTemplates(args.slice(1));
     return;
   }
 
