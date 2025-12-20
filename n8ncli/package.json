@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "description": "N8N CLI for monitoring workflows across multiple instances",
   "type": "module",
-  "main": "src/cli.js",
+  "main": "scripts/cli.js",
   "bin": {
-    "n8ncli": "./src/cli.js"
+    "n8ncli": "./scripts/cli.js"
   },
   "scripts": {
-    "start": "node src/cli.js"
+    "start": "node scripts/cli.js"
   },
   "dependencies": {}
 }
