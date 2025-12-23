@@ -26,6 +26,8 @@ ln -s ~/kaiserlich-skills/n8ncli ~/.claude/skills/n8ncli
 
 | Skill | Description |
 |-------|-------------|
+| [gemini-reader](./gemini-reader) | Delegate document analysis to Gemini 3 Flash - extract data, summarize, or analyze large documents to save context |
+| [lexcli](./lexcli) | Lexoffice bookkeeping automation - find unassigned transactions, view bookings, get smart account suggestions |
 | [n8ncli](./n8ncli) | N8N workflow monitoring - list workflows, analyze executions, track errors across multiple instances |
 
 ## Adding New Skills
