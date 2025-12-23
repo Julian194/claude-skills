@@ -27,71 +27,7 @@ function writeJsonToTemp(data, prefix = 'output') {
   return filepath;
 }
 
-const USAGE = `
-n8ncli - N8N CLI for monitoring workflows across multiple instances
-
-Usage:
-  n8ncli accounts list                    List configured workspaces
-  n8ncli accounts add <name>              Add a new workspace
-  n8ncli accounts remove <name>           Remove a workspace
-  n8ncli <workspace> <command> [options]  Run command on workspace
-
-Commands:
-  workflows                    List all workflows
-  workflow <id>                Get workflow definition (show all nodes)
-  workflow <id> --pinned       Show pinned/test data for a workflow
-  workflow create <file.json>  Create workflow from JSON file
-  workflow update <id> <file>  Update workflow from JSON file
-  workflow delete <id>         Delete a workflow
-  workflow activate <id>       Activate a workflow
-  workflow deactivate <id>     Deactivate a workflow
-  workflow set-code <id> <node> <file.js>  Update code node from JS file
-  workflow set-setting <id> <key> <value> Update a workflow setting
-  workflow add-tag <id> <tag>  Add a tag to a workflow
-  workflow remove-tag <id> <tag> Remove a tag from a workflow
-  workflow diff <id1> <id2>    Compare two workflows
-  search <query>               Search workflows for text or node types
-  clone <workspace:id> <target-workspace>  Clone workflow to another workspace
-  projects                     List all projects
-  executions <workflow-id>     List executions for a workflow
-  execution <id>               Get execution details (all nodes)
-  errors [--limit <n>]         List recent failed executions
-
-Template commands (no workspace required):
-  templates list               List saved templates
-  templates save <workspace> <workflow-id> [name]  Save workflow as template
-  templates show <name>        Show template details
-  templates deploy <name> <workspace>  Deploy template to workspace
-
-Options:
-  --limit <n>        Number of results (default: 10)
-  --status <status>  Filter by status: success, error, waiting
-  --project <id>     Project ID for workflow create
-  --node <name>      Filter/show specific node by name
-  --verbose          Show full node data (default: compact summary)
-  --errors           Only show failed nodes
-  --ai               Show AI-specific data (tokens, prompts, LLM outputs)
-  --full             Show full output text (not truncated)
-  --json             Write JSON to temp file, return path (context-efficient)
-  --pinned           Show pinned/test data for a workflow
-  --filter <k=v>     Filter executions by customData (e.g. --filter "airtable_id=xyz")
-
-Examples:
-  n8ncli accounts add myworkspace
-  n8ncli myworkspace workflows
-  n8ncli myworkspace workflow abc123 --pinned         # Show test data
-  n8ncli myworkspace workflow set-code abc123 "Code" ./format.js
-  n8ncli myworkspace workflow set-setting abc123 errorWorkflow xyz789
-  n8ncli myworkspace workflow add-tag abc123 skip-monitoring
-  n8ncli myworkspace workflow diff abc123 def456      # Compare workflows
-  n8ncli myworkspace search ntfy                      # Find workflows using ntfy
-  n8ncli myworkspace clone abc123 other-workspace     # Clone to another workspace
-  n8ncli myworkspace executions abc123 --limit 5
-  n8ncli myworkspace execution 123                    # Compact summary
-  n8ncli myworkspace execution 123 --node "AI Agent"  # Specific node
-  n8ncli myworkspace execution 123 --verbose          # Full data
-  n8ncli myworkspace errors --limit 20
-`;
+const USAGE = 'n8ncli <workspace> <command> [options]\nCommands: accounts, workflows, workflow, executions, execution, errors, search, clone, projects, templates';
 
 // Config management
 function ensureConfigDir() {

@@ -62,29 +62,17 @@ node {baseDir}/scripts/cli.js suggest
 # Show transaction details
 node {baseDir}/scripts/cli.js voucher <id>
 
-# Assign account to transaction
-node {baseDir}/scripts/cli.js assign <voucher-id> <category-id>
-
 # Search transactions
 node {baseDir}/scripts/cli.js search "IT made simple"
-node {baseDir}/scripts/cli.js search --from 2024-01-01 --to 2024-12-31
 
-# Export bookings report
-node {baseDir}/scripts/cli.js export --year 2024 --format csv
+# List contacts (customers/vendors)
+node {baseDir}/scripts/cli.js contacts
 ```
 
 ## Options
 
-**Filtering:**
 - `--limit <n>` - Number of results (default: 50)
-- `--from <date>` - Start date (YYYY-MM-DD)
-- `--to <date>` - End date (YYYY-MM-DD)
-- `--account <id>` - Filter by posting category
-- `--status <s>` - Filter: open, paid, overdue
-
-**Output:**
-- `--json` - Raw JSON output
-- `--verbose` - Detailed output
+- `--verbose` - Detailed error output
 
 ## Account Suggestion Logic
 

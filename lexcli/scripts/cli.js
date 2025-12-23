@@ -706,43 +706,7 @@ async function main() {
 }
 
 function showHelp() {
-  console.log(`
-${('lexcli')} - Lexoffice CLI for bookkeeping automation
-
-${('USAGE')}
-  node cli.js <command> [options]
-
-${('ACCOUNT COMMANDS')}
-  accounts list          Show configured API key status
-  accounts add           Add Lexoffice API key
-  accounts remove        Remove API key
-
-${('BOOKKEEPING COMMANDS')}
-  categories             List posting categories (Buchungskonten)
-  vouchers               List all vouchers/transactions
-  open                   Find open/unassigned transactions
-  bookings               Show bookings grouped by type
-  suggest                Get smart account suggestions for open items
-  search <query>         Search transactions by contact/number
-  voucher <id>           Show voucher details
-  contacts               List contacts (customers/vendors)
-
-${('OPTIONS')}
-  --limit <n>            Number of results (default: 50)
-  --status <s>           Filter: open, paid, overdue
-  --from <date>          Start date (YYYY-MM-DD)
-  --to <date>            End date (YYYY-MM-DD)
-  --account <id>         Filter by posting category
-  --json                 Raw JSON output
-  --verbose              Detailed output
-
-${('EXAMPLES')}
-  node cli.js accounts add
-  node cli.js open
-  node cli.js suggest
-  node cli.js search "IT made simple"
-  node cli.js bookings --limit 100
-`);
+  console.log('lexcli <command> [options]\nCommands: accounts, categories, vouchers, open, bookings, suggest, search, voucher, contacts');
 }
 
 main();
