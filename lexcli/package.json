@@ -1,0 +1,11 @@
+{
+  "name": "lexcli",
+  "version": "1.0.0",
+  "description": "Lexoffice CLI for bookkeeping automation",
+  "main": "scripts/cli.js",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/cli.js"
+  },
+  "dependencies": {}
+}

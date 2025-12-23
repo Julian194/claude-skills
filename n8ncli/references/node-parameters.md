@@ -296,6 +296,68 @@ The error trigger receives:
 }
 ```
 
+## Convert to File Node
+
+Convert JSON data to downloadable files:
+
+```json
+{
+  "parameters": {
+    "operation": "toText",
+    "sourceProperty": "html",
+    "options": {
+      "fileName": "={{ 'output-' + $json.id + '.html' }}",
+      "mimeType": "text/html"
+    }
+  },
+  "type": "n8n-nodes-base.convertToFile",
+  "typeVersion": 1.1
+}
+```
+
+### Operations
+
+| operation | sourceProperty | Use Case |
+|-----------|----------------|----------|
+| `toText` | JSON field name | Text files (HTML, CSV, TXT) |
+| `toJson` | (uses all JSON) | JSON file export |
+| `spreadsheet` | (structured data) | Excel/CSV export |
+
+### Common MIME Types
+
+| mimeType | File Type |
+|----------|-----------|
+| `text/html` | HTML |
+| `text/csv` | CSV |
+| `text/plain` | Plain text |
+| `application/json` | JSON |
+| `application/pdf` | PDF |
+
+## Google Drive Node (Upload)
+
+```json
+{
+  "parameters": {
+    "operation": "upload",
+    "name": "={{ $json.fileName }}",
+    "folderId": {
+      "__rl": true,
+      "value": "folder-id",
+      "mode": "id"
+    },
+    "options": {}
+  },
+  "type": "n8n-nodes-base.googleDrive",
+  "typeVersion": 3,
+  "credentials": {
+    "googleDriveOAuth2Api": {
+      "id": "credential-id",
+      "name": "Google Drive account"
+    }
+  }
+}
+```
+
 ## Common Patterns
 
 ### Expression Syntax

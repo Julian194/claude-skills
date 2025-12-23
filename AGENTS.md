@@ -27,6 +27,12 @@ metadata:                           # Optional: additional info
 # Instructions for the agent...
 ```
 
+## Design Principles
+
+**Minimal dependencies**: Use as few npm dependencies as possible. Skills are used by agents, not humans - no need for chalk, ora, or fancy CLI formatting. Node.js built-ins are preferred.
+
+**Token-efficient output**: CLI output should be concise to save context tokens, but meaningful enough for the agent to understand and act on. Avoid verbose logging, decorative separators, or redundant information. Every line of output should serve a purpose.
+
 ## Validation
 
 ```bash
